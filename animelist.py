@@ -5,8 +5,8 @@ import requests
 
 def parsepage(url):
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36'
-    headers1 = { 'User-Agent' : user_agent }
-    page = requests.get(url, headers=headers1).text.encode('utf8')
+    headers = { 'User-Agent' : user_agent }
+    page = requests.get(url, headers=headers).text.encode('utf8')
     return page
 
 def conv_Weekday2Chinese(attr):
@@ -26,18 +26,31 @@ def conv_Weekday2Chinese(attr):
         weekday = '星期日'
     return weekday
 
-pagecontent = parsepage("http://share.dmhy.org/cms/page/name/programme.html")
-target_all = file("all.yml","w")
-target_remain = file("remain.yml","w")
-target_firstselect = file("firstselect.yml","w")
-target_select = file("select.yml","w")
-pagecontent = pagecontent[pagecontent.find('//其它'):pagecontent.find('IE新窗')]
-items = re.findall(".{3}array\.push.*?(?=;)",pagecontent)
+def rssaddr_chosenteams(addr):
+    if addr.find("team_id%3A321") != -1:
+        addr = addr + "+GB+720+MP4&sort_id=2"
+    elif addr.find("team_id%3A58") != -1:
+        addr = addr + "+720+MP4&sort_id=2"
+    elif addr.find("team_id%3A185") != -1:
+        addr = addr + "+GB+720+MP4&sort_id=2"
+    elif addr.find("team_id%3A49") != -1:
+        addr = addr + "+%E7%AE%80+720+MP4&sort_id=2"
+    elif addr.find("team_id%3A283") != -1:
+        addr = addr + "+%E7%B9%81%E9%AB%94+720+MP4&sort_id=2"
+    elif addr.find("team_id%3A271") != -1:
+        addr = addr + "+%E7%AE%80%E4%BD%93+720&sort_id=2"
+    return addr
+
+page = parsepage("http://share.dmhy.org/cms/page/name/programme.html")
+page = page[page.find('//其它'):page.find('IE新窗')]
+items = re.findall(".{3}array\.push.*?(?=;)",page)
+
 blacklists = ['櫻桃小丸子','海賊王(航海王)','寶石寵物','七龍珠改魔人普烏篇',
               '美妙旋律Pripara','火影忍者','妖怪手錶','蠟筆小新','寵物小精靈',
               '名偵探柯南','美少女戰士Crystal','遊戲王ARC-V','偶像傳說']
 chosenteams = ['321','58','185','49','283','271']
 #ID对应'輕之國度','澄空','極影','華盟','千夏','異域'
+
 dict_all = {}
 dict_firstselect = {}
 dict_remain ={}
@@ -57,6 +70,7 @@ for i in items:
     for url in urls:
         team = url[url.find(">")+1:]
         rssaddr = "http://share.dmhy.org/topics/rss/rss.xml" + url[:url.find(">")-1]
+        rssaddr = rssaddr_chosenteams(rssaddr)
         dict_item[team] = rssaddr
     dict_all[weekday + ',' + title] = dict_item
 
@@ -69,6 +83,7 @@ for i in items:
                 if url.find("team_id%3A"+chosenteam+"\"") != -1:
                     team = url[url.find(">")+1:]
                     rssaddr = "http://share.dmhy.org/topics/rss/rss.xml" + url[:url.find(">")-1]
+                    rssaddr = rssaddr_chosenteams(rssaddr)
                     dict_item[team] = rssaddr
             flag_first = flag_first + 1
             flag_remain = 0
@@ -84,7 +99,7 @@ for i in items:
             dict_item[team] = rssaddr
         dict_remain[weekday + ',' + title] = dict_item
 
-yaml.safe_dump({'tasks':dict_all},target_all,default_flow_style=False,allow_unicode=True)
-yaml.safe_dump({'tasks':dict_select},target_select,default_flow_style=False,allow_unicode=True)
-yaml.safe_dump({'tasks':dict_firstselect},target_firstselect,default_flow_style=False,allow_unicode=True)
-yaml.safe_dump({'tasks':dict_remain},target_remain,default_flow_style=False,allow_unicode=True)
+yaml.safe_dump({'tasks':dict_all},file("all.yml","w"),default_flow_style=False,allow_unicode=True)
+yaml.safe_dump({'tasks':dict_select},file("select.yml","w"),default_flow_style=False,allow_unicode=True)
+yaml.safe_dump({'tasks':dict_firstselect},file("firstselect.yml","w"),default_flow_style=False,allow_unicode=True)
+yaml.safe_dump({'tasks':dict_remain},file("remain.yml","w"),default_flow_style=False,allow_unicode=True)
